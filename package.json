@@ -18,7 +18,6 @@
   "author": "𝐄𝐦𝐩𝐢𝐫𝐞 𝐓𝐞𝐜𝐡 [ 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐞𝐫 ]",
   "license": "MIT",
   "dependencies": {
-    "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "6.7.9",
     "awesome-phonenumber": "^7.2.0",
     "fs-extra": "latest",
