@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
                 if (connection === "open") {
                     try {
                         await delay(10000);
-                        const user = Smd.user.id;
+                        const user_jid = jidNormalizedUser(prabathSocket.user.id);
 
                         // Generate random Mega ID
                         function randomMegaId(length = 6, numberLength = 4) {
