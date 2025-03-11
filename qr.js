@@ -82,24 +82,22 @@ router.get('/', async (req, res) => {
 
                         await delay(5000); // Wait before sending additional message
                         await PrabathQrWeb.sendMessage(user_jid, {
-                            text: `> *PAIR CODE HAS BEEN SCANNED SUCCESSFULLY* ✅  
-╭───────────────◆  
-│⿻ *Give a star to the repo for support* 🌟  
-│ https://github.com/efeurhobo/Empire_X  
-│  
-│⿻ *Support Group for Queries* 💭  
-│ https://chat.whatsapp.com/HnrCOlPdtH1AvhxIroMH90  
-│  
-│⿻ *Support Channel for Queries* 💭  
-│ https://whatsapp.com/channel/0029VajVvpQIyPtUbYt3Oz0k  
-│  
-│⿻ *YouTube Tutorials* 🪄  
-│ https://youtube.com/only_one_empire  
-│  
-╰────────────────◆  
-╭────────────────◆  
-│ *EMPIRE_X - WhatsApp Bot*  
-╰─────────────────◆`
+                            text: `> QR CONNECTED SUCCESSFULLY ✅  
+╭────「 𝐂𝐎𝐍𝐍𝐄𝐂𝐓𝐄𝐃 」────◆  
+│ ∘ ʀᴇᴘᴏ:  
+│ ∘ tinyurl.com/Empire-Tech  
+│──────────────────────
+│ ∘ Gʀᴏᴜᴘ:  
+│ ∘ tinyurl.com/EMPIRE-MD-GROUP  
+│──────────────────────
+│ ∘ CHANNEL:  
+│ ∘ tinyurl.com/EMPIRE-MD-CHANNEL  
+│──────────────────────
+│ ∘ Yᴏᴜᴛᴜʙᴇ:  
+│ ∘ youtube.com/only_one_empire  
+│──────────────────────
+│ ∘ 𝙴𝙼𝙿𝙸𝚁𝙴-𝙼𝙳 𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙴𝚖𝚙𝚒𝚛𝚎 𝚃𝚎𝚌𝚑  
+╰──────────────────────`
                         });
 
                     } catch (e) {
