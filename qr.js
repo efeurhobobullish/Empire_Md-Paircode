@@ -1,79 +1,68 @@
-const { exec } = require("child_process");
-const { upload } = require('./mega');
 const express = require('express');
+const fs = require('fs');
+const { exec } = require("child_process");
 const pino = require("pino");
 const { toBuffer } = require("qrcode");
-const path = require('path');
-const fs = require("fs-extra");
-const { makeInMemoryStore } = require('@whiskeysockets/baileys');
-const { useMultiFileAuthState, Browsers, makeWASocket, delay, jidNormalizedUser } = require('@whiskeysockets/baileys');
+
+const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    delay,
+    makeCacheableSignalKeyStore,
+    Browsers,
+    jidNormalizedUser
+} = require("@whiskeysockets/baileys");
+const { upload } = require('./mega');
 
 let router = express.Router();
 
-const MESSAGE = process.env.MESSAGE || `> *PAIR CODE HAS BEEN SCANNED SUCCESSFULLY* ✅    
-╭───────────────◆    
-│⿻ *Gɪᴠᴇ ᴀ ꜱᴛᴀʀ ᴛᴏ ʀᴇᴘᴏ ꜰᴏʀ ᴄᴏᴜʀᴀɢᴇ* 🌟    
-│ https://github.com/efeurhobo/Empire_X    
-│    
-│⿻ *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭    
-│ https://chat.whatsapp.com/HnrCOlPdtH1AvhxIroMH90    
-│    
-│⿻ *Sᴜᴘᴘᴏʀᴛ CHANNEL ꜰᴏʀ ϙᴜᴇʀʏ* 💭    
-│ https://whatsapp.com/channel/0029VajVvpQIyPtUbYt3Oz0k    
-│    
-│⿻ *Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 🪄    
-│ https://youtube.com/only_one_empire    
-│    
-╰────────────────◆    
-╭────────────────◆    
-│ *EMPIRE_X--WHATTSAPP-BOT*    
-╰─────────────────◆`;
-
-const authInfoDir = './auth_info_baileys';
-
-if (fs.existsSync(authInfoDir)) {
-    fs.emptyDirSync(authInfoDir);
+function removeFile(FilePath) {
+    if (fs.existsSync(FilePath)) {
+        fs.rmSync(FilePath, { recursive: true, force: true });
+    }
 }
 
 router.get('/', async (req, res) => {
-    const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
-
-    async function startPrabath() {
-        const { state, saveCreds } = await useMultiFileAuthState(authInfoDir);
-
+    async function PrabathQr() {
+        const { state, saveCreds } = await useMultiFileAuthState(`./session`);
         try {
-            const prabathSocket = makeWASocket({
-                auth: state,
-                printQRInTerminal: false,
+            let PrabathQrWeb = makeWASocket({
+                auth: {
+                    creds: state.creds,
+                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+                },
+                printQRInTerminal: false,  // Disable printing QR to terminal
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
                 browser: Browsers.macOS("Safari"),
             });
 
-            prabathSocket.ev.on('creds.update', saveCreds);
-            prabathSocket.ev.on("connection.update", async (s) => {
-                const { connection, lastDisconnect, qr } = s;
+            PrabathQrWeb.ev.on('creds.update', saveCreds);
+            PrabathQrWeb.ev.on("connection.update", async (s) => {
+                const { connection, lastDisconnect, qr } = s; // ✅ Fixed destructuring
 
                 if (qr) {
+                    console.log("QR Code received!");
                     if (!res.headersSent) {
                         res.setHeader('Content-Type', 'image/png');
                         try {
-                            const qrBuffer = await toBuffer(qr);
-                            res.end(qrBuffer); // Send the buffer as the response
-                            return;
+                            const qrBuffer = await toBuffer(qr);  // Convert QR to buffer
+                            res.end(qrBuffer);  // Send the buffer as the response
+                            return; // ✅ Prevent multiple responses
                         } catch (error) {
                             console.error("Error generating QR Code buffer:", error);
-                            res.sendStatus(500); // Internal server error
-                            return;
+                            return; // ✅ Exit after sending the error response
                         }
                     }
                 }
 
                 if (connection === "open") {
-                    try {
-                        await delay(10000);
-                        const user_jid = jidNormalizedUser(prabathSocket.user.id);
+                    console.log("Connection opened successfully!");
 
-                        // Generate random Mega ID
+                    try {
+                        await delay(10000); // Wait before sending messages
+                        const authPath = './session/';
+                        const user_jid = jidNormalizedUser(PrabathQrWeb.user.id);
+
                         function randomMegaId(length = 6, numberLength = 4) {
                             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
                             let result = '';
@@ -84,54 +73,67 @@ router.get('/', async (req, res) => {
                             return `${result}${number}`;
                         }
 
-                        const credsPath = path.join(authInfoDir, 'creds.json');
-                        if (fs.existsSync(credsPath)) {
-                            const megaUrl = await upload(fs.createReadStream(credsPath), `${randomMegaId()}.json`);
-                            const sessionId = megaUrl.replace('https://mega.nz/file/', '');
+                        const sessionFile = authPath + 'creds.json';
+                        const mega_url = await upload(fs.createReadStream(sessionFile), `${randomMegaId()}.json`);
 
-                            console.log(`====================  SESSION ID  ==========================
-SESSION-ID ==> ${sessionId}
--------------------   SESSION CLOSED   -----------------------`);
+                        const sid = mega_url.replace('https://mega.nz/file/', '');
 
-                            await prabathSocket.sendMessage(user_jid, { text: sessionId });
+                        await PrabathQrWeb.sendMessage(user_jid, { text: sid });
 
-                            await delay(5000);
-                            await prabathSocket.sendMessage(user_jid, { text: MESSAGE });
+                        await delay(5000); // Wait before sending additional message
+                        await PrabathQrWeb.sendMessage(user_jid, {
+                            text: `> *PAIR CODE HAS BEEN SCANNED SUCCESSFULLY* ✅  
+╭───────────────◆  
+│⿻ *Give a star to the repo for support* 🌟  
+│ https://github.com/efeurhobo/Empire_X  
+│  
+│⿻ *Support Group for Queries* 💭  
+│ https://chat.whatsapp.com/HnrCOlPdtH1AvhxIroMH90  
+│  
+│⿻ *Support Channel for Queries* 💭  
+│ https://whatsapp.com/channel/0029VajVvpQIyPtUbYt3Oz0k  
+│  
+│⿻ *YouTube Tutorials* 🪄  
+│ https://youtube.com/only_one_empire  
+│  
+╰────────────────◆  
+╭────────────────◆  
+│ *EMPIRE_X - WhatsApp Bot*  
+╰─────────────────◆`
+                        });
 
-                            fs.emptyDirSync(authInfoDir);
-                        } else {
-                            console.error("creds.json not found in auth_info_baileys");
-                        }
-                    } catch (error) {
-                        console.error("Error during session open:", error);
+                    } catch (e) {
+                        console.error("Error sending message:", e);
+                        exec('pm2 restart prabath');
                     }
-                }
 
-                if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
+                    await delay(100);
+                    removeFile('./session');
+                    process.exit(0);
+                } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
+                    console.log("Connection closed, retrying...");
                     await delay(10000);
-                    startPrabath(); // Restart connection if necessary
+                    PrabathQr();
                 }
             });
         } catch (err) {
-            console.error("Error in socket creation:", err);
+            console.error("Error in PrabathQr function:", err);
             exec('pm2 restart prabath-md');
-            fs.emptyDirSync(authInfoDir);
-            res.status(503).send({ message: "Service Unavailable" });
+            PrabathQr();
+            removeFile('./session');
+
+            if (!res.headersSent) {
+                res.status(503).json({ error: "Service Unavailable" });
+            }
         }
     }
 
-    startPrabath().catch(async (err) => {
-        console.error("Error during startup:", err);
-        fs.emptyDirSync(authInfoDir);
-        exec('pm2 restart qasim');
-    });
-
-    return await startPrabath();
+    return PrabathQr();
 });
 
-process.on('uncaughtException', (err) => {
-    console.error('Caught exception:', err);
-    exec('pm2 restart prabath');
+process.on('uncaughtException', function (err) {
+    console.error('Uncaught exception:', err);
+    exec('pm2 restart prabath-md');
 });
 
 module.exports = router;
